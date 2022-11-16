@@ -1,29 +1,65 @@
 ---
 title: "final_hw5_hg2596"
-output: html_document
+output: github_document
 date: "2022-11-16"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r}
+
+library(tidyverse)
+library(readxl)
+library(lubridate)
+library(tidyr)
+library(dplyr)
+library(plotly)
 ```
 
-## R Markdown
+# Problem 2 
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+homicide_1= read_csv("./data/homicide_data.csv", show_col_types = FALSE)
 ```
 
-## Including Plots
+# Create a city_state variable 
 
-You can also embed plots, for example:
+```{r}
+homicide_1 = homicide_1 %>%
+  unite('city_state', city:state, remove = FALSE) %>% 
+  apply(., 2, function(city_state) as.character(gsub("_", ",", city_state))) 
 
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+The homicide raw data has `r nrow(homicide_1) `observations and `r ncol(homicide_1)`  variables. 
+Key variables 
+
+
+```{r}
+homicide_2 = as.tibble(homicide_1) %>%
+  janitor::clean_names() %>%
+  mutate(victim_age = as.numeric(victim_age)) %>%
+  mutate(lat = as.numeric(lat)) %>%
+  mutate(lon = as.numeric(lon)) %>%
+  mutate(status = ifelse(disposition%in%c("Closed without arrest","Open/No arrest"), 1, 0))
+```
+
+```{r}
+sum_hc = homicide_2 %>%
+  group_by(city) %>%
+  summarize(n_obs = n(), 
+            n_unsolved = sum(status)) 
+```
+
+```{r}
+baltimore_hc = sum_hc %>% 
+  filter(city == "Baltimore") 
+```
+
+# Prop test Baltimore
+
+```{r}
+first_prop = prop.test(x = pull(baltimore_hc,n_unsolved), n = pull(baltimore_hc,n_obs)) %>%
+  broom::tidy()
+```
+
+For Baltimore, the probability of having an unsolved case is `r first_prop = prop.test(x = pull(baltimore_hc,n_unsolved), n = pull(baltimore_hc,n_obs)) %>% broom::tidy()`.
+
