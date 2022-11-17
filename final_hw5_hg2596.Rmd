@@ -8,8 +8,8 @@ date: "2022-11-16"
 library(tidyverse)
 library(lubridate)
 library(tidyr)
-library(dplyr)
 library(plotly)
+library(dplyr)
 library(plyr)
 ```
 
@@ -182,7 +182,7 @@ final_map_2 = final_map %>%
   group_by(true_mean) %>%
   dplyr::summarize(n_obs = n(), 
             probability_reject = (sum(reject_null))/n_obs,
-            new_mu = mean(mu_hat)) 
+            ave_e = mean(mu_hat)) 
 ```
 
 # Summarize 2
@@ -194,7 +194,7 @@ final_map_3 =
   group_by(true_mean) %>%
   dplyr::summarize(n_obs = n(), 
             probability_reject = (sum(reject_null))/n_obs,
-            new_mu = mean(mu_hat)) 
+            ave_e = mean(mu_hat)) 
 ```
 
 # Graph 1 
@@ -218,7 +218,7 @@ Since effect size is impacted by how far the mean estimates are from the 'true' 
 ```{r}
 graph_2 = 
   final_map_2 %>%
-  plot_ly(x = ~true_mean, y = ~new_mu, type = "scatter", mode = "markers",color = ~ true_mean, alpha = 1.2) %>% 
+  plot_ly(x = ~true_mean, y = ~ave_e, type = "scatter", mode = "markers",color = ~ true_mean, alpha = 1.2) %>% 
   layout(title = 'Average Mean Estimates vs True Mean Values',
          xaxis = list(title = 'True Mean Values'),
          yaxis = list(title = 'Average Mean Estimates'), 
@@ -232,7 +232,7 @@ graph_2
 ```{r}
 graph_3 = 
   final_map_3 %>%
-  plot_ly(x = ~true_mean, y = ~new_mu, type = "scatter", mode = "markers",color = ~ true_mean, alpha = 1.2) %>%
+  plot_ly(x = ~true_mean, y = ~ave_e, type = "scatter", mode = "markers",color = ~ true_mean, alpha = 1.2) %>%
   layout(title = 'Average Mean Estimates vs True Mean Values (when null was rejected)',
          xaxis = list(title = 'True Mean Values'),
          yaxis = list(title = 'Average Mean Estimates'), 
@@ -241,8 +241,14 @@ graph_3 =
 graph_3 
 ```
 
-For **graph 2** we can notice that when the **average estimate of mean** are plotted across the **true mean**, it seems as though the **average mean estimates** are able to provide the true mean values, which could be supported by the fact that we has **large sample sizes** therefore better ability to estimate the true mean. 
+For **graph 2** we can notice that when the **average estimate of mean** are plotted across the **true mean**, it seems as though the average mean estimates are able to provide the values for true mean, which could be supported by the fact that we has **large sample sizes** therefore better ability to estimate the true mean. 
 
-However, when the data set is **restricted** to just the samples for which the null was rejected, we notice that the **average mean estimates** are not good estimates of the **true mean values**, therefore, the sample average of means across test for samples that reject the null do not approximately equal the true mean values. We expect this to be the case because values that reject the null are have **significantly different means from the null hypothesis** which would **not approximate** the true mean.
+However, **graph 3** when the data set is **restricted** to just the samples for which the null was rejected, we notice that the **average mean estimates** are not good estimates of the **true mean values** for **small** true mean values. 
+
+When true mean values are low, sample average of means across (test for samples that reject the null) do not approximately equal the true mean values, however, for **true mean values of 4, 5 and 6** they do approximately equal the true mean values.
+
+This is what we expect to see because the lower true mean(1,2,3) are will have lower probability for rejecting the null, which means they have **lower sample size**, low sample size makes it **harder to approximate** the true mean. However, for higher values of true mean (4,5,6) we expect more values to reject the null, therefore, **higher sample size** which leads to **better approximation** of the true mean value. 
+
+
 
 
