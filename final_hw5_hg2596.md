@@ -16,7 +16,6 @@ library(tidyverse)
     ## ✖ dplyr::lag()    masks stats::lag()
 
 ``` r
-library(readxl)
 library(lubridate)
 ```
 
@@ -48,13 +47,38 @@ library(plotly)
     ## 
     ##     layout
 
+``` r
+library(plyr)
+```
+
+    ## ------------------------------------------------------------------------------
+    ## You have loaded plyr after dplyr - this is likely to cause problems.
+    ## If you need functions from both plyr and dplyr, please load plyr first, then dplyr:
+    ## library(plyr); library(dplyr)
+    ## ------------------------------------------------------------------------------
+    ## 
+    ## Attaching package: 'plyr'
+    ## 
+    ## The following objects are masked from 'package:plotly':
+    ## 
+    ##     arrange, mutate, rename, summarise
+    ## 
+    ## The following objects are masked from 'package:dplyr':
+    ## 
+    ##     arrange, count, desc, failwith, id, mutate, rename, summarise,
+    ##     summarize
+    ## 
+    ## The following object is masked from 'package:purrr':
+    ## 
+    ##     compact
+
 # Problem 2
 
 ``` r
 homicide_1= read_csv("./data/homicide_data.csv", show_col_types = FALSE)
 ```
 
-# Create a city_state variable
+# Creating a City State Variable
 
 ``` r
 homicide_1 = homicide_1 %>%
@@ -62,11 +86,17 @@ homicide_1 = homicide_1 %>%
   apply(., 2, function(city_state) as.character(gsub("_", ",", city_state))) 
 ```
 
-The homicide raw data has 52179observations and 13 variables. Key
-variables
+The homicide raw data has 52179 observations and 13 variables. Key
+variables are **uid** which gives a unique ID to each homicide victim
+and the **city**, **state** in which the killing took place. Another
+important variable is the **deposition** which describes the status of
+the case for examples is it closed with an arrest or possibly still open
+with no arrest.
+
+# Cleaning Data and Creating Status Variable
 
 ``` r
-homicide_2 = as.tibble(homicide_1) %>%
+homicide_2 = as_tibble(homicide_1) %>%
   janitor::clean_names() %>%
   mutate(victim_age = as.numeric(victim_age)) %>%
   mutate(lat = as.numeric(lat)) %>%
@@ -74,18 +104,12 @@ homicide_2 = as.tibble(homicide_1) %>%
   mutate(status = ifelse(disposition%in%c("Closed without arrest","Open/No arrest"), 1, 0))
 ```
 
-    ## Warning: `as.tibble()` was deprecated in tibble 2.0.0.
-    ## Please use `as_tibble()` instead.
-    ## The signature and semantics have changed, see `?as_tibble`.
-    ## This warning is displayed once every 8 hours.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.
-
-    ## Warning in mask$eval_all_mutate(quo): NAs introduced by coercion
+    ## Warning in eval(cols[[col]], .data, parent.frame()): NAs introduced by coercion
 
 ``` r
 sum_hc = homicide_2 %>%
   group_by(city) %>%
-  summarize(n_obs = n(), 
+  dplyr::summarize(n_obs = n(), 
             n_unsolved = sum(status)) 
 ```
 
@@ -103,17 +127,17 @@ first_prop = prop.test(x = pull(baltimore_hc,n_unsolved), n = pull(baltimore_hc,
 
 # Prop test all citities
 
-# Make a dataset to hold “x” and “y”
+# Make a dataset
 
 ``` r
  hold_xy = 
   tibble(homicide_2 %>%
     group_by(city) %>%
-    summarize(n_obs = n(), 
+    dplyr::summarize(n_obs = n(), 
             n_unsolved = sum(status)))
 ```
 
-# Make a function with prop.test
+# Make a Function with Prop.test
 
 ``` r
 function_xy = function(x, y) {
@@ -123,7 +147,7 @@ function_xy = function(x, y) {
 }
 ```
 
-# Map over function and clean
+# Map Over Function and Clean
 
 ``` r
 map2_holdxy = 
@@ -133,22 +157,34 @@ map2_holdxy =
       map2(.x = n_unsolved,.y = n_obs, ~function_xy(x = .x, y = .y))
   ) %>% 
   unnest(estimate_df) %>%
-  select( - parameter, -method, -alternative, -statistic)
+  janitor::clean_names() %>%
+  select( - parameter, -method, -alternative, -statistic) 
 ```
 
-# Graph estimates and Cl’s
+# Graph Estimates and Cl’s
 
 ``` r
 graph_p_1 = 
-  ggplot(map2_holdxy, aes(x = city, y = estimate)) + 
-  geom_point() 
+  map2_holdxy %>%
+  mutate(city = fct_reorder(city,estimate)) %>%
+  ggplot(aes(x = city, y = estimate)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin = conf_low, ymax = conf_high)) + 
+  labs(
+    title = "Scatter Plot of Estimates with Error Bars",
+    x = "Cities",
+    y = "Estimates",
+  ) + 
+  theme(axis.text.x=element_text(angle=60,vjust = 1, hjust=1,size=10))
+
+graph_p_1  
 ```
 
-geom_errorbar(aes(x = , y = ))
+![](final_hw5_hg2596_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 # Problem 3
 
-# Create a function
+# Create a Function
 
 ``` r
 function_a = function(true_mean) 
@@ -161,31 +197,31 @@ function_a = function(true_mean)
 }
 ```
 
-# Map over function for Mu = 0
+# Map over Function for Mu = 0
 
 ``` r
 map_df = 
   expand_grid(
     true_mean = 0, 
-    iter = 1:100) %>% 
+    iter = 1:5000) %>% 
   mutate(
     estimate_df = map(.x = true_mean,~function_a(true_mean = .x))) %>%
   unnest(estimate_df)
 ```
 
-# Map over function for Mu = 1:6
+# Map over Function for Mu = 1:6
 
 ``` r
 map_df = 
   expand_grid(
     true_mean = 1:6, 
-    iter = 1:1000) %>% 
+    iter = 1:5000) %>% 
   mutate(
     estimate_df = map(.x = true_mean,~function_a(true_mean = .x))) %>%
   unnest(estimate_df)
 ```
 
-# Clean data and create variable
+# Clean data
 
 ``` r
 final_map = 
@@ -205,7 +241,7 @@ final_map =
 ``` r
 final_map_2 = final_map %>%
   group_by(true_mean) %>%
-  summarize(n_obs = n(), 
+  dplyr::summarize(n_obs = n(), 
             probability_reject = (sum(reject_null))/n_obs,
             new_mu = mean(mu_hat)) 
 ```
@@ -217,7 +253,7 @@ final_map_3 =
   final_map %>%
   filter(reject_null == 1) %>%
   group_by(true_mean) %>%
-  summarize(n_obs = n(), 
+  dplyr::summarize(n_obs = n(), 
             probability_reject = (sum(reject_null))/n_obs,
             new_mu = mean(mu_hat)) 
 ```
@@ -237,6 +273,11 @@ graph_1
 ```
 
 ![](final_hw5_hg2596_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+
+Since effect size is impacted by how far the mean estimates are from the
+‘true’ mean of ‘0’, this graph shows as the true means gets farther
+away, the effect size increases which increases the power (the
+probability of rejecting the null hypothesis).
 
 # Graph 2
 
@@ -260,7 +301,7 @@ graph_2
 graph_3 = 
   final_map_3 %>%
   plot_ly(x = ~true_mean, y = ~new_mu, type = "scatter", mode = "markers",color = ~ true_mean, alpha = 1.2) %>%
-  layout(title = 'Average Mean Estimates vs True Mean Values (in samples where null was rejected)',
+  layout(title = 'Average Mean Estimates vs True Mean Values (when null was rejected)',
          xaxis = list(title = 'True Mean Values'),
          yaxis = list(title = 'Average Mean Estimates'), 
          legend = list(title=list(text='<b> True Mean Values </b>')))
@@ -270,4 +311,17 @@ graph_3
 
 ![](final_hw5_hg2596_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
-\#lay it on top of eachother??
+For **graph 2** we can notice that when the **average estimate of mean**
+are plotted across the **true mean**, it seems as though the **average
+mean estimates** are able to provide the true mean values, which could
+be supported by the fact that we has **large sample sizes** therefore
+better ability to estimate the true mean.
+
+However, when the data set is **restricted** to just the samples for
+which the null was rejected, we notice that the **average mean
+estimates** are not good estimates of the **true mean values**,
+therefore, the sample average of means across test for samples that
+reject the null do not approximately equal the true mean values. We
+expect this to be the case because values that reject the null are have
+**significantly different means from the null hypothesis** which would
+**not approximate** the true mean.
