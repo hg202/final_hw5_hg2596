@@ -276,8 +276,12 @@ graph_1
 
 Since effect size is impacted by how far the mean estimates are from the
 ‘true’ mean of ‘0’, this graph shows as the true means gets farther
-away, the effect size increases which increases the power (the
-probability of rejecting the null hypothesis).
+away, the **effect size increases** which **increases the power** (the
+probability of rejecting the null hypothesis). The graph also shows that
+around true mean value of **5 and 6**, the power of the test doesn’t
+change as much because **once you’ve reached a certain effect size**
+it’s almost certain that your power for the test will be very high,
+leading you to reject.
 
 # Graph 2
 
